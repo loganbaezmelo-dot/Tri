@@ -219,7 +219,7 @@
       <div class="card" style="margin-bottom: 16px;">
         <div class="card-header">
           <span>Input: .tri Code</span>
-          <input type="file" id="tri-upload" accept=".tri,.txt" style="display: none;" onchange="handleFileUpload(event)">
+          <input type="file" id="tri-upload" accept=".tri,.txt,*" style="display: none;" onchange="handleFileUpload(event)">
           <button class="btn btn-secondary" onclick="document.getElementById('tri-upload').click()">Upload .tri</button>
         </div>
         <textarea id="in-tri" placeholder="Paste your @markup, @style, @logic here..."></textarea>
@@ -233,21 +233,21 @@
         <div class="card">
           <div class="card-header">
             <span>Extracted HTML</span>
-            <button class="btn btn-secondary" onclick="downloadFile('out-html', 'index.html')">Download</button>
+            <button class="btn btn-secondary" onclick="downloadFile('out-html', 'index.html', 'text/html')">Download</button>
           </div>
           <textarea id="out-html" readonly></textarea>
         </div>
         <div class="card">
           <div class="card-header">
             <span>Extracted CSS</span>
-            <button class="btn btn-secondary" onclick="downloadFile('out-css', 'style.css')">Download</button>
+            <button class="btn btn-secondary" onclick="downloadFile('out-css', 'style.css', 'text/css')">Download</button>
           </div>
           <textarea id="out-css" readonly></textarea>
         </div>
         <div class="card">
           <div class="card-header">
             <span>Extracted JS</span>
-            <button class="btn btn-secondary" onclick="downloadFile('out-js', 'script.js')">Download</button>
+            <button class="btn btn-secondary" onclick="downloadFile('out-js', 'script.js', 'text/javascript')">Download</button>
           </div>
           <textarea id="out-js" readonly></textarea>
         </div>
@@ -265,7 +265,6 @@
   </div>
 
   <script>
-    // Tab Switching
     function switchTab(tabId) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
@@ -274,7 +273,6 @@
       document.getElementById(tabId).classList.add('active');
     }
 
-    // 1. Pack into .tri
     function compileToTri() {
       const html = document.getElementById('in-html').value.trim();
       const css = document.getElementById('in-css').value.trim();
@@ -295,7 +293,6 @@
       document.getElementById('out-tri').value = triOutput.trim();
     }
 
-    // 2. Unpack from .tri
     function parseTri(content) {
       const markupMatch = content.match(/@markup\s*\{([\s\S]*?)\}(?=(\s*@style|\s*@logic|$))/i);
       const styleMatch  = content.match(/@style\s*\{([\s\S]*?)\}(?=(\s*@markup|\s*@logic|$))/i);
@@ -319,15 +316,15 @@
       renderPreview(html, css, js);
     }
 
-    // Render Preview
     function renderPreview(html, css, js) {
       const frame = document.getElementById('preview-frame');
       const doc = frame.contentDocument || frame.contentWindow.document;
 
       const code = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
           <head>
+            <meta charset="utf-8">
             <style>${css}</style>
           </head>
           <body>
@@ -342,21 +339,22 @@
       doc.close();
     }
 
-    // Helpers: Copy & Download
     function copyText(elemId) {
       const val = document.getElementById(elemId).value;
       navigator.clipboard.writeText(val);
       alert('Copied to clipboard!');
     }
 
-    function downloadFile(elemId, filename) {
+    function downloadFile(elemId, filename, mimeType = 'application/octet-stream') {
       const content = document.getElementById(elemId).value;
-      const blob = new Blob([content], { type: 'text/plain' });
+      const blob = new Blob(["\uFEFF" + content], { type: `${mimeType};charset=utf-8` });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 
@@ -366,7 +364,7 @@
       const js = document.getElementById('out-js').value;
 
       const fullHtml = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <style>
@@ -382,12 +380,14 @@ ${js}
 </body>
 </html>`;
 
-      const blob = new Blob([fullHtml], { type: 'text/html' });
+      const blob = new Blob(["\uFEFF" + fullHtml], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'bundle.html';
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 
@@ -398,7 +398,7 @@ ${js}
       reader.onload = (event) => {
         document.getElementById('in-tri').value = event.target.result;
       };
-      reader.readAsText(file);
+      reader.readAsText(file, 'UTF-8');
     }
   </script>
 </body>
